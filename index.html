@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>テキスト暗記ツール_22S0098</title>
+    <link rel="stylesheet" href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+    <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+    <style>
+        /* 全体の背景色とフォントの設定 */
+        body {
+            background-color: #f5f5f5;
+            font-family: 'Arial', sans-serif;
+        }
+        /* ヘッダーのスタイル設定 */
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px 10px 0 0;
+        }
+        /* メインコンテンツのスタイル設定 */
+        .ui-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        /* テキストエリアのスタイル設定 */
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            font-size: 16px;
+            color: #333;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+        /* ボタンのスタイル設定 */
+        button {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            color: white;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: background-color 0.3s;
+        }
+        /* ボタンのホバー時のスタイル */
+        button:hover {
+            background-color: #45a049;
+        }
+        /* 参照テキスト表示エリアのスタイル */
+        #referenceOutput {
+            margin-top: 20px;
+        }
+        /* 表示/非表示ボタンのスタイル */
+        #showButton {
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+        /* リストビューのスタイル */
+        .listview {
+            padding: 0;
+            list-style: none; /* デフォルトのリストスタイルを削除 */
+        }
+        /* リストアイテムのスタイル */
+        .listview li {
+            margin: 10px 0;
+        }
+        /* リストアイテム内のリンクのスタイル */
+        .listview a {
+            display: block;
+            padding: 10px 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            text-decoration: none;
+            color: #333;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s;
+        }
+        /* リンクのホバー時のスタイル */
+        .listview a:hover {
+            background-color: #e0e0e0;
+        }
+        /* メディアクエリ：小さい画面向けのスタイル */
+        @media only screen and (max-width: 750px) and (max-height: 1334px) {
+            body {
+                padding: 10px;
+                font-size: 14px;
+            }
+            .header {
+                padding: 15px;
+                font-size: 20px;
+            }
+            .ui-content {
+                padding: 20px;
+            }
+            textarea {
+                padding: 10px;
+            }
+            button {
+                padding: 10px;
+                font-size: 16px;
+            }
+        }
+    </style>
+    <script>
+        // ページが作成されたときの処理
+        $(document).on("pagecreate", "#main-page", function () {
+            $("#checkButton").on("click", checkCode); // チェックボタンのクリックイベントを設定
+            $("#fileInput").on("change", importText); // ファイル入力の変更イベントを設定
+            $("#showButton").on("click", toggleReferenceText); // 表示ボタンのクリックイベントを設定
+        });
+
+        // 入力したテキストと参照テキストをチェックする関数
+        function checkCode() {
+            var inputText = $("#codeInput").val().trim(); // 入力テキストを取得し、トリムする
+            var referenceText = $("#referenceText").val().trim(); // 参照テキストを取得し、トリムする
+
+            var inputLines = inputText.split("\n").map(line => line.trim()); // 入力テキストを行ごとに分割し、トリムする
+            var referenceLines = referenceText.split("\n").map(line => line.trim()); // 参照テキストを行ごとに分割し、トリムする
+
+            var result = $("#result"); // 結果表示エリアを取得
+            result.empty(); // 結果表示エリアをクリア
+
+            var errorText = ""; // エラーテキストを初期化
+            var match = true; // 一致フラグを初期化
+            for (var i = 0; i < Math.max(inputLines.length, referenceLines.length); i++) {
+                var inputLine = inputLines[i] || ""; // 入力行を取得、存在しない場合は空文字
+                var referenceLine = referenceLines[i] || ""; // 参照行を取得、存在しない場合は空文字
+                if (inputLine !== referenceLine) {
+                    match = false; // 一致しない場合はフラグをfalseに
+                    errorText += "<span style='color:red'>" + referenceLine + "</span>\n"; // 一致しない行を赤色で表示
+                } else {
+                    errorText += referenceLine + "\n"; // 一致する行をそのまま表示
+                }
+            }
+
+            if (match) {
+                result.html("一致しました！"); // 一致した場合のメッセージ
+            } else {
+                result.html("エラーがあります。コードを確認してください：<br><pre>" + errorText + "</pre>"); // エラーがある場合のメッセージ
+            }
+
+            $("#popupText").popup("open"); // チェック結果のポップアップを表示
+        }
+
+        // テキストファイルをインポートする関数
+        function importText() {
+            var fileInput = $("#fileInput")[0]; // ファイル入力要素を取得
+            var file = fileInput.files[0]; // 選択されたファイルを取得
+            var reader = new FileReader(); // FileReaderオブジェクトを作成
+
+            // ファイルが読み込まれたときの処理
+            reader.onload = function(e) {
+                var importedText = e.target.result; // 読み込まれたテキストを取得
+                $("#referenceText").val(importedText); // 参照テキストエリアに設定
+                $("#referenceOutput").hide(); // 参照テキストエリアを非表示
+                $("#showButton").show(); // 表示ボタンを表示
+            };
+
+            reader.readAsText(file); // テキストとしてファイルを読み込む
+        }
+
+        // 参照テキストの表示/非表示を切り替える関数
+        function toggleReferenceText() {
+            var referenceOutput = $("#referenceOutput"); // 参照テキストエリアを取得
+
+            if (referenceOutput.is(":hidden")) {
+                referenceOutput.show(); // 非表示の場合は表示
+                $("#showButton").text("隠す"); // ボタンのテキストを変更
+            } else {
+                referenceOutput.hide(); // 表示の場合は非表示
+                $("#showButton").text("表示"); // ボタンのテキストを変更
+            }
+        }
+    </script>
+</head>
+<body>
+    <!-- メインページ -->
+    <div data-role="page" id="main-page">
+        <!-- ヘッダー -->
+        <div class="header" data-theme="b">
+            <h1>テキスト暗記ツール_22S0098</h1>
+        </div>
+        <!-- メインコンテンツ -->
+        <div role="main" class="ui-content">
+            <p>入力したテキスト：</p>
+            <textarea id="codeInput" placeholder="ここにテキストを入力してください"></textarea>
+            <button id="checkButton" class="ui-btn ui-corner-all ui-shadow">チェック</button>
+            <p id="result"></p>
+
+            <p>またはテキストファイルをインポート：</p>
+            <input type="file" id="fileInput" accept=".txt">
+
+            <div id="referenceOutput" style="display: none;">
+                <p>インポートされたテキスト内容：</p>
+                <textarea id="referenceText"></textarea>
+            </div>
+
+            <button id="showButton" class="ui-btn ui-corner-all ui-shadow">表示</button>
+
+            <!-- リストビュー -->
+            <ul class="listview">
+                <li><a href="#about-page" class="ui-btn ui-corner-all ui-shadow">このツールについて</a></li>
+            </ul>
+        </div>
+
+        <!-- ポップアップ -->
+        <div data-role="popup" id="popupText" class="ui-content" style="max-width:350px;">
+            <p id="popupMessage">チェックが完了しました。</p>
+        </div>
+    </div>
+
+    <!-- このツールについてのページ -->
+    <div data-role="page" id="about-page">
+        <div data-role="header">
+            <h1>このツールについて</h1>
+        </div>
+        <div role="main" class="ui-content">
+            <p>このツールは、入力したテキストと参照テキストを比較するためのツールです。</p>
+            <p>使い方：</p>
+            <ol>
+                <li>ファイルの準備：暗記したい内容が含まれているテキストファイルを用意します。</li>
+                <li>ファイルのインポート：「ファイルを選択してください」というボタンをクリックして、準備したテキストファイルを選択します。</li>
+                <li>テキストの入力：テキストエリアに記憶したいテキストを入力します。</li>
+                <li>テキストの提出："提出します"ボタンをクリックします。</li>
+                <li>結果の確認：一致しない部分やエラー箇所が赤色で表示されます。間違った部分を確認し、修正します。</li>
+            </ol>
+            <p>制作者：孫 賢超<br>学籍番号：22S0098</p>
+            <a href="#main-page" class="ui-btn ui-corner-all ui-shadow ui-btn-inline">戻る</a>
+        </div>
+    </div>
+</body>
+</html>
